@@ -1,0 +1,1686 @@
+<!DOCTYPE html>
+<html lang="es" class="h-full">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Radio Browser Premium - Spotify Style</title>
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Helvetica Neue"', 'Arial', 'Inter', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'SFMono-Regular', 'monospace'],
+          },
+          aspectRatio: {
+            'golden': '1.618 / 1',
+          },
+          colors: {
+            spotify: {
+              green: '#1DB954',
+              hover: '#1ed760',
+              black: '#121212',
+              card: '#181818',
+              cardHover: '#282828',
+              selected: '#3e3e3e',
+            }
+          },
+          animation: {
+            'spin-slow': 'spin 12s linear infinite',
+            'pulse-fast': 'pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Lucide Icons CDN -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <style>
+    /* Premium custom styling and scrolling overrides */
+    body {
+      background-color: #121212;
+      color: #ffffff;
+    }
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #121212;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #282828;
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #3e3e3e;
+    }
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    @keyframes tape-spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+    .tape-reel-spin {
+      animation: tape-spin 4s linear infinite;
+    }
+    .tape-reel-spin-fast {
+      animation: tape-spin 1.5s linear infinite;
+    }
+    /* Fade in animation */
+    .animate-fade-in {
+      animation: fadeIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body class="h-full flex flex-col font-sans select-none antialiased text-neutral-200">
+
+  <!-- Main Vue-like Reactive / Alpine-inspired App Controller -->
+  <div id="app" class="flex flex-col min-h-screen pb-40 md:pb-44">
+    
+    <!-- Top Premium Navbar Header -->
+    <header class="flex items-center justify-between px-6 py-4 border-b border-[#282828] bg-[#121212]/95 sticky top-0 z-40 backdrop-blur-md">
+      <div class="flex items-center gap-3">
+        <div class="w-9 h-9 rounded-full bg-spotify-green flex items-center justify-center shadow-lg shadow-spotify-green/20">
+          <i data-lucide="radio" class="w-5 h-5 text-black"></i>
+        </div>
+        <div>
+          <h1 class="text-md font-bold text-white tracking-tight flex items-center gap-1.5">
+            Radio Browser <span class="text-spotify-green font-mono text-[10px] bg-zinc-900 px-2 py-0.5 rounded-full border border-zinc-800">Premium</span>
+          </h1>
+          <p class="text-[10px] text-zinc-400">Diseño fluido e interactivo todo en uno</p>
+        </div>
+      </div>
+
+      <!-- User Information Details -->
+      <div class="flex items-center gap-3">
+        <div class="text-right hidden sm:block">
+          <p class="text-xs font-semibold text-white">gastonlasca@gmail.com</p>
+          <p class="text-[10px] text-zinc-400">Usuario Premium de Radio</p>
+        </div>
+        <div class="w-8 h-8 rounded-full bg-spotify-green/20 border border-spotify-green/45 flex items-center justify-center font-bold text-spotify-green text-sm">
+          G
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Viewport Context Grid -->
+    <main class="flex-grow max-w-7xl w-full mx-auto p-4 md:p-6 overflow-hidden">
+      
+      <!-- Sintonizando Signals Loader -->
+      <div id="initial-loader" class="py-24 text-center flex flex-col items-center justify-center text-zinc-400 gap-3 hidden">
+        <div class="relative w-14 h-14">
+          <div class="absolute inset-0 rounded-full border-4 border-zinc-800 border-t-spotify-green animate-spin"></div>
+        </div>
+        <p class="text-sm font-semibold animate-pulse">Sintonizando señales mundiales...</p>
+      </div>
+
+      <!-- Main Contents Rendered dynamically -->
+      <div id="main-viewport-content">
+        
+        <!-- ======================= TAB 0: INICIO ======================= -->
+        <div id="tab-inicio" class="tab-pane space-y-8 animate-fade-in text-left">
+          
+          <!-- Playlist Trigger & Cassette REC Buttons Panel -->
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-zinc-900/35 p-4 rounded-xl border border-zinc-900/50">
+            <button onclick="openPlaylistModal()" class="flex items-center gap-2 px-5 py-2.5 bg-spotify-green hover:bg-spotify-hover text-black font-bold text-sm rounded-lg transition-all shadow-lg shadow-spotify-green/10 cursor-pointer hover:scale-[1.01] active:scale-95">
+              <i data-lucide="folder-heart" class="w-4 h-4 fill-black"></i>
+              Armando mis Playlists
+            </button>
+
+            <!-- Inline Compact Recorder Block -->
+            <div class="flex items-center gap-2.5 bg-zinc-950 p-2 rounded-full border border-zinc-800">
+              <div class="flex items-center gap-2 px-3">
+                <span id="rec-dot" class="w-2.5 h-2.5 rounded-full bg-zinc-600"></span>
+                <span class="text-xs uppercase font-bold tracking-wider text-zinc-400" id="recorder-status-text">LISTO</span>
+              </div>
+              <button id="recorder-action-btn" onclick="toggleRecording()" class="p-2 rounded-full bg-red-600 hover:bg-red-500 text-white transition-all cursor-pointer shadow disabled:opacity-50" disabled>
+                <i data-lucide="mic" class="w-4 h-4"></i>
+              </button>
+              <button onclick="switchTab(3)" class="text-xs px-3.5 py-1.5 hover:bg-zinc-900 rounded-full text-zinc-300 font-semibold border border-zinc-800 hover:text-white transition-all">
+                Ver Grabaciones
+              </button>
+            </div>
+          </div>
+
+          <!-- Recently Escuchadas (Historico) -->
+          <div>
+            <h3 class="text-lg font-bold text-white mb-3 tracking-tight flex items-center gap-2">
+              <i data-lucide="sliders" class="w-5 h-5 text-indigo-400"></i>
+              Recientemente Escuchadas
+            </h3>
+            <div id="history-container-empty" class="bg-zinc-900/25 border border-zinc-900 rounded-xl p-6 text-center text-zinc-500 text-xs italic">
+              Las emisoras que escuches se guardarán automáticamente aquí.
+            </div>
+            <div id="history-scroll-grid" class="flex gap-4 overflow-x-auto pb-3 snap-x no-scrollbar hidden">
+              <!-- Dynamically populated -->
+            </div>
+          </div>
+
+          <!-- Mis Estaciones Favoritas -->
+          <div>
+            <h3 class="text-lg font-bold text-white mb-3 tracking-tight flex items-center gap-2">
+              <i data-lucide="heart" class="w-5 h-5 text-spotify-green fill-spotify-green/20"></i>
+              Mis Estaciones Favoritas
+            </h3>
+            <div id="favorites-container-empty" class="bg-zinc-900/25 border border-zinc-900 p-8 rounded-xl text-center text-zinc-500 text-xs">
+              ¿Te gusta una radio? Presiona el corazón en el reproductor para agregarla a tus favoritos.
+            </div>
+            <div id="favorites-scroll-grid" class="flex gap-4 overflow-x-auto pb-3 snap-x no-scrollbar hidden">
+              <!-- Dynamically populated -->
+            </div>
+          </div>
+
+          <!-- Estaciones Recomendadas (Top Clicks) -->
+          <div>
+            <h3 class="text-lg font-bold text-white mb-3 tracking-tight flex items-center gap-2">
+              <i data-lucide="sparkles" class="w-5 h-5 text-yellow-400"></i>
+              Estaciones Recomendadas para Ti
+            </h3>
+            <div id="recommended-scroll-grid" class="flex gap-4 overflow-x-auto pb-3 snap-x no-scrollbar">
+              <!-- Inline loading spinner or dynamically loaded radio cards -->
+               <div class="py-8 text-center text-zinc-500 text-xs animate-pulse w-full">Cargando recomendaciones...</div>
+            </div>
+          </div>
+
+          <!-- Recientemente Incorporadas -->
+          <div class="pb-4">
+            <h3 class="text-lg font-bold text-white mb-3 tracking-tight flex items-center gap-2">
+              <i data-lucide="compass" class="w-5 h-5 text-spotify-green"></i>
+              Recientemente Incorporadas
+            </h3>
+            <div id="recent-scroll-grid" class="flex gap-4 overflow-x-auto pb-3 snap-x no-scrollbar">
+               <div class="py-8 text-center text-zinc-500 text-xs animate-pulse w-full">Cargando nuevas emisoras...</div>
+            </div>
+          </div>
+
+        </div>
+
+
+        <!-- ======================= TAB 1: BUSCAR ======================= -->
+        <div id="tab-buscar" class="tab-pane space-y-6 animate-fade-in text-left hidden">
+          
+          <!-- Large Search Bar -->
+          <div class="relative">
+            <input
+              id="search-input-field"
+              type="text"
+              oninput="handleSearchTyped(this.value)"
+              placeholder="¿Qué quieres escuchar? (radio, país, género)"
+              class="w-full bg-[#181818] border border-[#282828] text-white rounded-xl py-3 pl-11 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-spotify-green focus:border-transparent transition-all"
+            />
+            <i data-lucide="search" class="absolute left-4 top-3.5 text-zinc-400 w-4 h-4"></i>
+            <button onclick="clearSearch()" id="search-clear-btn" class="absolute right-4 top-3.5 text-zinc-400 hover:text-white hidden">
+              <i data-lucide="x" class="w-4 h-4"></i>
+            </button>
+          </div>
+
+          <!-- Filter selection notification -->
+          <div id="filter-country-indicator" class="flex items-center gap-1.5 bg-spotify-green/10 border border-spotify-green/20 rounded-lg px-3 py-1.5 self-start text-xs text-spotify-green hidden">
+            <i data-lucide="globe" class="w-3.5 h-3.5"></i>
+            <span>Filtrando por país: <strong id="filter-country-text"></strong></span>
+            <button onclick="clearCountryFilter()" class="ml-1.5 p-0.5 hover:bg-spotify-green/20 rounded-full transition-colors">
+              <i data-lucide="x" class="w-3 h-3"></i>
+            </button>
+          </div>
+
+          <!-- Dynamic Search Results -->
+          <div id="search-results-block" class="space-y-4 hidden">
+            <h3 class="text-md font-bold text-white tracking-tight flex items-center justify-between pb-2 border-b border-zinc-900">
+              <span>Resultados de Búsqueda</span>
+              <span id="search-active-spinner" class="text-xs text-spotify-green animate-pulse hidden">Buscando...</span>
+            </h3>
+            
+            <div id="search-results-empty" class="bg-zinc-900/40 p-12 text-center text-zinc-500 rounded-xl hidden">
+              Ningún resultado para tu búsqueda. Prueba con otros criterios.
+            </div>
+
+            <div id="search-results-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              <!-- Results go here -->
+            </div>
+          </div>
+
+          <!-- Search Category Presets and Directory Directory -->
+          <div id="search-presets-block" class="space-y-6">
+            <div class="grid grid-cols-2 gap-4">
+              <!-- Presets -->
+              <button onclick="searchByGenre('Jazz')" class="aspect-golden bg-gradient-to-br from-emerald-600 to-teal-800 text-left p-4 rounded-xl flex flex-col justify-between shadow-lg relative overflow-hidden group cursor-pointer border border-emerald-500/20 hover:scale-[1.01] transition-transform">
+                <h3 class="text-lg font-bold text-white tracking-tight">Música</h3>
+                <i data-lucide="music" class="w-10 h-10 text-white/20 absolute -right-1 -bottom-1 transform translate-x-2 translate-y-2 scale-125 group-hover:scale-150 transition-transform"></i>
+              </button>
+
+              <button onclick="searchByGenre('Talk')" class="aspect-golden bg-gradient-to-br from-indigo-600 to-purple-800 text-left p-4 rounded-xl flex flex-col justify-between shadow-lg relative overflow-hidden group cursor-pointer border border-indigo-500/20 hover:scale-[1.01] transition-transform">
+                <h3 class="text-lg font-bold text-white tracking-tight">Podcast</h3>
+                <i data-lucide="radio" class="w-10 h-10 text-white/20 absolute -right-1 -bottom-1 transform translate-x-2 translate-y-2 scale-125 group-hover:scale-150 transition-transform"></i>
+              </button>
+
+              <button onclick="toggleCountrySelector()" class="aspect-golden bg-gradient-to-br from-yellow-600 to-amber-800 text-left p-4 rounded-xl flex flex-col justify-between shadow-lg relative overflow-hidden group cursor-pointer border border-yellow-500/10 hover:scale-[1.01] transition-transform" id="btn-search-paises">
+                <h3 class="text-lg font-bold text-white tracking-tight">Países</h3>
+                <i data-lucide="globe" class="w-10 h-10 text-white/20 absolute -right-1 -bottom-1 transform translate-x-2 translate-y-2 scale-125 group-hover:scale-150 transition-transform"></i>
+              </button>
+
+              <button onclick="searchNearMe()" class="aspect-golden bg-gradient-to-br from-pink-600 to-rose-800 text-left p-4 rounded-xl flex flex-col justify-between shadow-lg relative overflow-hidden group cursor-pointer border border-pink-500/20 hover:scale-[1.01] transition-transform">
+                <h3 class="text-lg font-bold text-white tracking-tight">Cerca Mío</h3>
+                <i data-lucide="map-pin" class="w-10 h-10 text-white/20 absolute -right-1 -bottom-1 transform translate-x-2 translate-y-2 scale-125 group-hover:scale-150 transition-transform"></i>
+              </button>
+            </div>
+
+            <!-- Country directory selection Drawer -->
+            <div id="country-directory-drawer" class="bg-zinc-900 border border-zinc-800 p-4 rounded-xl space-y-4 hidden">
+              <div class="flex items-center justify-between border-b border-zinc-800 pb-2">
+                <h4 class="text-sm font-bold text-white flex items-center gap-1.5">
+                  <i data-lucide="globe" class="w-4 h-4 text-amber-400"></i>
+                  Directorio de Países de la A a la Z
+                </h4>
+                <button onclick="toggleCountrySelector()" class="text-zinc-400 hover:text-white">
+                  <i data-lucide="x" class="w-4 h-4"></i>
+                </button>
+              </div>
+              <div id="countries-directory-list" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 max-h-[220px] overflow-y-auto pr-2">
+                <!-- Country lists loaded asynchronously -->
+                <div class="text-center text-xs text-zinc-500 p-4 col-span-full">Cargando directorio de países...</div>
+              </div>
+            </div>
+
+            <!-- Sub category shelf - genres list -->
+            <div>
+              <h4 class="text-sm font-semibold text-zinc-400 uppercase tracking-widest mb-3">
+                Explorar todos los géneros
+              </h4>
+              <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4" id="all-genres-grid">
+                <!-- Statically designed genre items -->
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+
+        <!-- ======================= TAB 2: TRADUCIR (IA Signal Translator) ======================= -->
+        <div id="tab-traducir" class="tab-pane space-y-6 animate-fade-in text-left hidden">
+          <div class="w-full text-left bg-[#181818] p-1 rounded-2xl border border-[#282828]">
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-[#282828] p-4">
+              <div>
+                <h3 class="text-xl font-bold text-white flex items-center gap-2">
+                  <i data-lucide="languages" class="w-6 h-6 text-spotify-green rotate-6"></i>
+                  Traductor de Señal IA en Vivo
+                </h3>
+                <p class="text-xs text-zinc-400 mt-1">
+                  Descodificación y transcripción por inteligencia artificial en tiempo real.
+                </p>
+              </div>
+
+              <!-- Selected language target selection -->
+              <div class="flex items-center gap-2 bg-[#121212] p-1.5 rounded-xl border border-[#282828]">
+                <i data-lucide="globe" class="w-4 h-4 text-spotify-green ml-2"></i>
+                <select id="translator-lang-target" onchange="runAiTranslation()" class="bg-transparent text-white text-xs font-semibold focus:outline-none pr-3 cursor-pointer">
+                  <option value="Español" class="bg-zinc-900 border-none">Español</option>
+                  <option value="English" class="bg-zinc-900 border-none">English (Inglés)</option>
+                  <option value="Português" class="bg-zinc-900 border-none">Português (Portugués)</option>
+                  <option value="Deutsch" class="bg-zinc-900 border-none">Deutsch (Alemán)</option>
+                  <option value="Français" class="bg-zinc-900 border-none">Français (Francés)</option>
+                  <option value="Italiano" class="bg-zinc-900 border-none">Italiano (Italiano)</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Translate content viewport empty vs active -->
+            <div id="translator-empty-message" class="bg-[#121212] border border-[#282828] rounded-xl p-12 text-center flex flex-col items-center justify-center text-zinc-500 mt-6 mx-4">
+              <i data-lucide="volume-x" class="w-12 h-12 text-zinc-700 mb-3 animate-pulse"></i>
+              <h4 class="text-md font-bold text-zinc-400">Ninguna Radio Reproduciendo</h4>
+              <p class="text-xs text-zinc-500 mt-1 max-w-sm">
+                Sintoniza tu estación favorita en "Inicio" o "Buscar" para sincronizar la señal de audio con la inteligencia artificial.
+              </p>
+            </div>
+
+            <!-- Translator actively listening -->
+            <div id="translator-active-board" class="p-4 space-y-5 hidden">
+              <div class="flex items-center justify-between bg-[#121212]/60 rounded-xl p-4 border border-[#282828]">
+                <div class="flex items-center gap-3 overflow-hidden">
+                  <div class="w-10 h-10 bg-spotify-green/10 rounded-lg flex items-center justify-center border border-spotify-green/25 text-spotify-green">
+                    <i data-lucide="activity" class="w-5 h-5 animate-pulse"></i>
+                  </div>
+                  <div class="overflow-hidden">
+                    <span class="text-[10px] uppercase font-bold text-spotify-green tracking-wider">Escuchando Ahora</span>
+                    <h4 id="translator-station-title" class="text-sm font-bold text-white truncate">Radio Disney</h4>
+                  </div>
+                </div>
+
+                <button onclick="runAiTranslation()" class="p-2.5 bg-[#282828] hover:bg-[#3e3e3e] text-white rounded-xl transition-colors flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider cursor-pointer">
+                  <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+                  Sincronizar
+                </button>
+              </div>
+
+              <!-- Loader State -->
+              <div id="translator-loading-box" class="py-12 flex flex-col items-center justify-center text-zinc-500 gap-3 hidden">
+                <div class="relative w-12 h-12 flex items-center justify-center">
+                  <div class="absolute inset-0 rounded-full border-4 border-[#282828] border-t-spotify-green animate-spin"></div>
+                  <i data-lucide="sparkles" class="w-4 h-4 text-spotify-green animate-pulse"></i>
+                </div>
+                <p class="text-sm text-zinc-300 font-semibold animate-pulse">Capturando espectro de la señal...</p>
+              </div>
+
+              <!-- Translation Output Panels -->
+              <div id="translator-results-grid" class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                
+                <!-- Transcription -->
+                <div class="bg-[#121212] p-4 rounded-xl border border-[#282828]/60 flex flex-col justify-between">
+                  <div>
+                    <div class="flex items-center justify-between pb-2 border-b border-zinc-900 mb-3">
+                      <span class="text-[11px] uppercase tracking-wider font-bold text-zinc-400 flex items-center gap-1.5">
+                        <i data-lucide="volume-2" class="w-3.5 h-3.5 text-zinc-500"></i>
+                        Trascripción Original
+                      </span>
+                      <span id="translator-source-badge" class="text-[10px] text-zinc-500 bg-[#181818] px-2 py-0.5 rounded-full border border-[#282828] font-mono uppercase">ES</span>
+                    </div>
+                    <p id="transcription-text-box" class="text-sm italic text-zinc-300 leading-relaxed font-serif">
+                      "¡Bienvenidos de nuevo! Los sintonizo desde lo más alto de la torre de radio... En este momento estamos sintonizando la mejor balada pop de la temporada."
+                    </p>
+                  </div>
+                  <div class="mt-4 pt-2.5 border-t border-zinc-900 text-[11px] text-zinc-400 flex items-center justify-between">
+                    <span>Espectrograma: Activo</span>
+                    <span class="w-2.5 h-2.5 rounded-full bg-spotify-green animate-ping"></span>
+                  </div>
+                </div>
+
+                <!-- Translation -->
+                <div class="bg-spotify-green/5 p-4 rounded-xl border border-spotify-green/20 flex flex-col justify-between p-4">
+                  <div>
+                    <div class="flex items-center justify-between pb-2 border-b border-spotify-green/10 mb-3">
+                      <span class="text-[11px] uppercase tracking-wider font-bold text-spotify-green flex items-center gap-1.5">
+                        <i data-lucide="languages" class="w-3.5 h-3.5 text-spotify-green"></i>
+                        Traducción IA en Vivo
+                      </span>
+                      <span id="translator-target-badge" class="text-[10px] text-spotify-green bg-spotify-green/10 px-2 py-0.5 rounded-full border border-spotify-green/30 font-mono uppercase">Español</span>
+                    </div>
+                    <p id="translation-text-box" class="text-sm font-medium text-white leading-relaxed">
+                      "¡Bienvenidos de nuevo! En este instante les presento el éxito que conquista a la juventud en todo el planeta."
+                    </p>
+                  </div>
+
+                  <!-- AI Vibe Info Box -->
+                  <div class="mt-4 bg-[#121212]/85 rounded-lg p-2.5 border border-[#282828]/80 text-xs">
+                    <span class="font-bold text-yellow-500 uppercase flex items-center gap-1 mb-1">
+                      <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
+                      Análisis de Vibe IA:
+                    </span>
+                    <p id="translator-vibe-analysis" class="text-zinc-300">
+                      Entusiasmo y alta energía con transmisión de música contemporánea.
+                    </p>
+                  </div>
+                </div>
+
+              </div>
+
+            </div>
+          </div>
+        </div>
+
+
+        <!-- ======================= TAB 3: GRABACIONES (Cassettes Deck View) ======================= -->
+        <div id="tab-grabaciones" class="tab-pane space-y-5 animate-fade-in text-left hidden">
+          <button onclick="switchTab(0)" class="px-3 py-1.5 bg-zinc-900 border border-zinc-800 rounded-lg text-xs font-semibold text-zinc-400 hover:text-white transition-colors inline-flex items-center gap-1 cursor-pointer">
+            <i data-lucide="chevron-left" class="w-4 h-4"></i> Volver al Inicio
+          </button>
+
+          <!-- Cassette Deck Animation Frame -->
+          <div class="bg-zinc-900 rounded-2xl p-6 border border-zinc-800/80 text-center flex flex-col items-center">
+            
+            <!-- Standard Retro Cassette Frame -->
+            <div class="w-72 h-44 bg-zinc-950 rounded-xl border-4 border-zinc-800 flex flex-col justify-between p-3.5 relative overflow-hidden shadow-2xl">
+              <!-- Label -->
+              <div class="w-full bg-zinc-800 rounded p-1 mb-2 border border-zinc-700 flex flex-col items-center text-center">
+                <span class="text-[9px] font-mono tracking-widest text-[#1DB954]" id="cassette-radio-label">CASSETTE DECK SYSTEM</span>
+                <span class="text-[10px] uppercase font-bold text-white tracking-tight truncate w-full" id="cassette-title-label">SINTONIZANDO SEÑAL</span>
+              </div>
+
+              <!-- Reels system -->
+              <div class="flex-grow flex items-center justify-around px-8">
+                <!-- Left Reel -->
+                <div class="w-14 h-14 rounded-full bg-zinc-800 border-2 border-zinc-650 flex items-center justify-center relative">
+                  <div class="w-11 h-11 rounded-full bg-zinc-950 border-4 border-dotted border-zinc-500 flex items-center justify-center p-1" id="reel-left">
+                    <div class="w-3 h-3 rounded-full bg-white"></div>
+                  </div>
+                </div>
+                <!-- Window Window center -->
+                <div class="h-6 w-14 bg-zinc-900/60 rounded border border-zinc-800/80 flex items-center justify-center text-[8px] text-zinc-500 font-mono select-none">
+                  [ 00:00 ]
+                </div>
+                <!-- Right Reel -->
+                <div class="w-14 h-14 rounded-full bg-zinc-800 border-2 border-zinc-650 flex items-center justify-center relative">
+                  <div class="w-11 h-11 rounded-full bg-zinc-950 border-4 border-dotted border-zinc-500 flex items-center justify-center p-1" id="reel-right">
+                    <div class="w-3 h-3 rounded-full bg-white"></div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Bottom decorative -->
+              <div class="flex justify-between items-center px-4 mt-2">
+                <span class="text-[8px] font-mono text-zinc-600">IEC I / NORMAL</span>
+                <span class="text-[8px] font-mono text-zinc-500 text-red-500 font-bold" id="cassette-rec-indicator">NR OFF</span>
+                <span class="text-[8px] font-mono text-zinc-655">60 MIN</span>
+              </div>
+            </div>
+
+            <!-- Tape Play Controls -->
+            <div class="flex items-center gap-3 mt-5">
+              <button id="cassette-action-play" onclick="playActiveRecording()" class="w-11 h-11 rounded-full bg-white text-black flex items-center justify-center shadow hover:scale-105 transition-all text-sm cursor-pointer" disabled>
+                <i data-lucide="play" class="w-5 h-5 fill-black"></i>
+              </button>
+              <button id="cassette-action-stop" onclick="stopActiveRecordingPlayback()" class="w-11 h-11 rounded-full bg-zinc-800 hover:bg-zinc-700 text-white flex items-center justify-center shadow hover:scale-105 transition-all text-sm cursor-pointer hidden">
+                <i data-lucide="square" class="w-5 h-5 fill-white"></i>
+              </button>
+              
+              <div class="text-left">
+                <h4 id="active-recording-name" class="text-sm font-bold text-white">Ningún fragmento seleccionado</h4>
+                <p id="active-recording-duration" class="text-xs text-zinc-500 font-mono">00:00 • Presiona reproducir en alguna de tus grabaciones debajo</p>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Historic Recordings Catalog list -->
+          <div>
+            <h3 class="text-md font-bold text-white tracking-tight pb-2 border-b border-zinc-800 select-none">
+              Catálogo de Fragmentos Grabados
+            </h3>
+            
+            <div id="recordings-empty-state" class="bg-zinc-900/15 border border-zinc-900 rounded-xl p-12 text-center text-zinc-500 text-sm">
+              <i data-lucide="cassette-tape" class="w-12 h-12 text-zinc-700 mx-auto mb-3"></i>
+              No has grabado ningún fragmento todavía. ¡Sintoniza una radio y presiona el micrófono rojo para capturar momentos!
+            </div>
+
+            <div id="recordings-list-grid" class="space-y-2 mt-3 max-h-[300px] overflow-y-auto pr-1">
+              <!-- Dynamically populated cassette tapes -->
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+    </main>
+
+    <!-- Persistent Spotify Premium player bar -->
+    <div id="persistent-player-bar" class="fixed bottom-16 md:bottom-20 left-0 right-0 bg-[#181818] border-t border-[#282828] px-4 py-3.5 z-30 flex items-center justify-between gap-4 max-w-7xl mx-auto shadow-2xl rounded-t-3xl border-x border-[#282828] hidden">
+      
+      <!-- Metadata left -->
+      <div class="flex items-center gap-3 overflow-hidden min-w-0 flex-1 md:flex-initial">
+        <div class="w-11 h-11 bg-zinc-800 rounded-full border border-zinc-700 flex items-center justify-center font-black text-spotify-green text-xs" id="player-favicon-wrapper">
+          <i data-lucide="disc" id="player-disc-icon" class="w-5 h-5"></i>
+        </div>
+        <div class="overflow-hidden text-left">
+          <h4 id="player-station-name" class="text-sm font-bold text-white truncate max-w-[150px] sm:max-w-[220px]">Radio Disney</h4>
+          <p id="player-station-tags" class="text-xs text-zinc-400 truncate max-w-[150px] sm:max-w-[220px]">Pop, Hits, Juventud</p>
+        </div>
+        <button id="player-fav-toggle-btn" class="p-1.5 hover:bg-zinc-900 rounded-full text-zinc-400 cursor-pointer">
+          <i data-lucide="heart" class="w-4 h-4" id="player-heart-icon"></i>
+        </button>
+      </div>
+
+      <!-- Controls center -->
+      <div class="flex-1 flex flex-col items-center gap-2 max-w-md">
+        <div class="flex items-center gap-5">
+          <!-- User feedback stop button 'FALTA EL STOP!' -->
+          <button onclick="stopStationPlayer()" title="Detener transmisión" class="text-zinc-400 hover:text-white transition-transform duration-75 cursor-pointer">
+            <i data-lucide="square" class="w-4 h-4 fill-current"></i>
+          </button>
+
+          <!-- Play / Pause primary -->
+          <button id="player-play-pause-btn" onclick="togglePlayerPlayback()" class="w-8 h-8 rounded-full bg-white text-black flex items-center justify-center shadow hover:scale-105 transition-all text-sm cursor-pointer">
+            <i data-lucide="play" class="w-4 h-4 fill-black" id="player-play-icon"></i>
+          </button>
+        </div>
+
+        <!-- Simulated signal seeker slider -->
+        <div class="w-full flex items-center gap-2">
+          <span class="text-[9px] font-mono text-zinc-500">LINEA</span>
+          <div class="flex-grow h-1 bg-zinc-800 rounded-full relative overflow-hidden">
+            <div id="player-progress-bar" class="absolute left-0 top-0 h-full w-[45%] bg-spotify-green rounded-full"></div>
+          </div>
+          <span class="text-[9px] font-mono text-spotify-green animate-pulse">VIVO</span>
+        </div>
+      </div>
+
+      <!-- Volume & status right -->
+      <div class="hidden sm:flex items-center justify-end gap-3 w-44 md:w-56">
+        <!-- Badge -->
+        <div class="flex items-center gap-1.5 bg-zinc-900 border border-zinc-800 px-2 py-1 rounded-full text-[9px] text-zinc-500 font-mono">
+          <span class="w-1.5 h-1.5 rounded-full bg-spotify-green animate-pulse"></span>
+          <span>ONLINE</span>
+        </div>
+
+        <button onclick="toggleMuteState()" class="p-1 text-zinc-400 hover:text-white cursor-pointer">
+          <i data-lucide="volume-2" id="player-volume-icon" class="w-4 h-4"></i>
+        </button>
+        <input type="range" min="0" max="1" step="0.05" value="0.8" oninput="adjustVolumeValue(this.value)" class="w-16 md:w-20 accent-spotify-green h-1 bg-zinc-800 rounded-lg cursor-pointer">
+      </div>
+
+    </div>
+
+    <!-- Bottom Navigation Bar Tabs -->
+    <nav class="fixed bottom-0 left-0 right-0 bg-[#000000] border-t border-[#282828] px-6 py-3.5 z-40 flex justify-around max-w-7xl mx-auto backdrop-blur-xl">
+      <button onclick="switchTab(0)" class="flex flex-col items-center gap-1 text-xs cursor-pointer text-spotify-green font-bold text-center" id="nav-btn-0">
+        <i data-lucide="home" class="w-5 h-5"></i>
+        <span>Inicio</span>
+      </button>
+      <button onclick="switchTab(1)" class="flex flex-col items-center gap-1 text-xs cursor-pointer text-zinc-500 hover:text-white text-center" id="nav-btn-1">
+        <i data-lucide="search" class="w-5 h-5"></i>
+        <span>Buscar</span>
+      </button>
+      <button onclick="switchTab(2)" class="flex flex-col items-center gap-1 text-xs cursor-pointer text-zinc-500 hover:text-white text-center" id="nav-btn-2">
+        <i data-lucide="languages" class="w-5 h-5"></i>
+        <span>Traducir</span>
+      </button>
+    </nav>
+
+
+    <!-- ======================= MODAL: ARMANDO PLAYLISTS ======================= -->
+    <div id="playlist-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 hidden">
+      <div class="w-full max-w-2xl bg-[#181818] border border-[#282828] rounded-2xl overflow-hidden shadow-2xl flex flex-col max-h-[85vh]">
+        <!-- Header -->
+        <div class="p-5 border-b border-[#282828] flex items-center justify-between bg-[#121212]/50">
+          <div class="flex items-center gap-3">
+            <i data-lucide="folder-heart" class="w-6 h-6 text-spotify-green"></i>
+            <h2 class="text-xl font-bold text-white tracking-tight">Playlists de Radios Favoritas</h2>
+          </div>
+          <button onclick="closePlaylistModal()" class="p-1 rounded-full text-zinc-400 hover:text-white hover:bg-[#282828] transition-colors cursor-pointer">
+            <i data-lucide="x" class="w-6 h-6"></i>
+          </button>
+        </div>
+
+        <!-- Form and Input fields to make new playlist -->
+        <div class="p-4 bg-[#121212] border-b border-[#282828]">
+          <div class="flex gap-2">
+            <input type="text" id="new-playlist-input" placeholder="Nombre de la nueva playlist..." class="flex-grow bg-[#181818] text-white rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-spotify-green border border-[#282828]" />
+            <button onclick="createNewPlaylistAction()" class="bg-spotify-green hover:bg-spotify-hover text-black font-semibold rounded-lg px-4 py-2 text-sm flex items-center gap-1.5 transition-colors cursor-pointer">
+              <i data-lucide="plus" class="w-4 h-4"></i> Crear
+            </button>
+          </div>
+        </div>
+
+        <!-- Split directory details -->
+        <div class="flex-grow flex flex-col md:flex-row overflow-hidden min-h-[300px]">
+          <!-- Left directory columns list -->
+          <div class="w-full md:w-2/5 border-r border-[#282828] overflow-y-auto p-3 flex flex-col gap-1.5 bg-[#121212]/30 max-h-[170px] md:max-h-none">
+            <span class="text-xs font-semibold text-zinc-500 px-2 mb-1 uppercase tracking-wider">Mis Playlists</span>
+            <div id="playlist-menu-list" class="space-y-1">
+              <!-- Render directories dynamically -->
+            </div>
+          </div>
+
+          <!-- Right playlist item contents detail list -->
+          <div class="w-full md:w-3/5 overflow-y-auto p-4 flex flex-col text-left">
+            <div id="playlist-detail-empty" class="my-auto text-center text-zinc-650 p-6">
+              <i data-lucide="music" class="w-10 h-10 mx-auto mb-2 text-zinc-700"></i>
+              <p class="text-xs">Selecciona una playlist de la izquierda para ver su contenido o agregar la estación reproducida actualmente.</p>
+            </div>
+
+            <div id="playlist-detail-board" class="space-y-4 hidden">
+              <div class="flex items-center justify-between pb-2 border-b border-zinc-800">
+                <h4 id="detail-playlist-title" class="text-sm font-bold text-white">Nombre de Playlist</h4>
+                <button id="add-to-playlist-selector-btn" onclick="addPlayingToSelectedPlaylist()" class="text-xs text-spotify-green hover:underline cursor-pointer flex items-center gap-1">
+                  <i data-lucide="plus" class="w-3 h-3"></i> Añadir actual
+                </button>
+              </div>
+
+              <!-- Station lists -->
+              <div id="detail-playlist-items-list" class="space-y-2">
+                <!-- Dynamically listed item details -->
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+
+  </div>
+
+  <!-- Audio Core element -->
+  <audio id="audio-core"></audio>
+
+  <!-- Script logics implementation -->
+  <script>
+    // System States
+    let currentStation = null;
+    let isPlaying = false;
+    let isMuted = false;
+    let volume = 0.8;
+    let activeTab = 0; // 0: Inicio, 1: Buscar, 2: Traducir, 3: Grabaciones
+
+    // Database / Static Local values matching premium design logic
+    let playlists = JSON.parse(localStorage.getItem("spotify_radio_playlists")) || [];
+    let favorites = JSON.parse(localStorage.getItem("spotify_radio_favorites")) || [];
+    let playHistory = JSON.parse(localStorage.getItem("spotify_radio_history")) || [];
+    let recordedFragments = JSON.parse(localStorage.getItem("spotify_radio_recordings")) || [];
+
+    // Memory cached selectors
+    let selectedPlaylistId = null;
+
+    // Search buffers
+    let searchQuery = "";
+    let searchResults = [];
+    let selectedCountryCode = null;
+    let countriesList = [];
+
+    // Recording logic state variables
+    let isRecording = false;
+    let recordingStartTime = 0;
+
+    // Direct fetch fast Radio Servers index fallback
+    const BASE_RADIO_SERVER = "https://de1.api.radio-browser.info/json";
+
+    // Statically provided genre card definitions
+    const GENRES_LIST = [
+      { name: "Rock", color: "from-red-600 to-amber-700" },
+      { name: "Blues", color: "from-blue-800 to-indigo-900" },
+      { name: "Jazz", color: "from-yellow-800 to-amber-900" },
+      { name: "Pop", color: "from-pink-600 to-rose-700" },
+      { name: "K-pop", color: "from-indigo-600 to-purple-800" },
+      { name: "Tango", color: "from-orange-800 to-stone-900" },
+      { name: "Salsa", color: "from-yellow-500 to-amber-700" },
+      { name: "Latin Music", color: "from-emerald-700 to-teal-900" },
+      { name: "Country", color: "from-yellow-900 to-orange-950" },
+      { name: "News", color: "from-zinc-700 to-slate-900" },
+      { name: "Classical", color: "from-stone-700 to-zinc-900" },
+      { name: "Talk", color: "from-teal-600 to-stone-900" }
+    ];
+
+    // Audio Element initialization
+    const audioCore = document.getElementById('audio-core');
+
+    // On Load Window initialization triggering
+    window.addEventListener('DOMContentLoaded', () => {
+      // Setup Initial components
+      renderStaticGenres();
+      loadRadioBrowserData();
+      refreshPlaylistsDisplay();
+      refreshFavoritesView();
+      refreshHistoryView();
+      refreshGrabacionesCatalog();
+      
+      // Initialize Lucide Icons initially
+      lucide.createIcons();
+    });
+
+    // switchTab selection control
+    function switchTab(tabIndex) {
+      activeTab = tabIndex;
+      
+      // Toggle display panes
+      document.querySelectorAll('.tab-pane').forEach((el, index) => {
+        if(index === tabIndex) {
+          el.classList.remove('hidden');
+        } else {
+          el.classList.add('hidden');
+        }
+      });
+
+      // Update Navigation Tab bar highlighting buttons
+      for(let i = 0; i <= 2; i++) {
+        const btn = document.getElementById(`nav-btn-${i}`);
+        if(btn) {
+          if (i === tabIndex || (tabIndex === 3 && i === 0)) {
+            btn.classList.add('text-spotify-green', 'font-bold');
+            btn.classList.remove('text-zinc-500');
+          } else {
+            btn.classList.remove('text-spotify-green', 'font-bold');
+            btn.classList.add('text-zinc-500');
+          }
+        }
+      }
+
+      // Handle specific triggers on tab load
+      if (tabIndex === 2) {
+        initTranslatorTab();
+      }
+
+      // Re-initialize icons
+      lucide.createIcons();
+    }
+
+    // Load initial external database info streams
+    async function loadRadioBrowserData() {
+      document.getElementById('initial-loader').classList.remove('hidden');
+      try {
+        // 1. Fetch top clicks for recommended stations
+        const recRes = await fetch(`${BASE_RADIO_SERVER}/stations/topclick?limit=15&hidebroken=true`);
+        if (recRes.ok) {
+          const recData = await recRes.json();
+          renderRadiosScroll(recData, 'recommended-scroll-grid');
+        }
+
+        // 2. Fetch last change stations
+        const lastRes = await fetch(`${BASE_RADIO_SERVER}/stations/lastchange?limit=15&hidebroken=true`);
+        if (lastRes.ok) {
+          const lastData = await lastRes.json();
+          renderRadiosScroll(lastData, 'recent-scroll-grid');
+        }
+
+        // 3. Fetch countries directory catalog
+        const countryRes = await fetch(`${BASE_RADIO_SERVER}/countries`);
+        if (countryRes.ok) {
+          countriesList = await countryRes.json();
+          countriesList.sort((a,b) => a.name.localeCompare(b.name));
+          renderCountriesDirectory();
+        }
+
+      } catch (err) {
+        console.warn("Falla de sintonización de red:", err);
+      } finally {
+        document.getElementById('initial-loader').classList.add('hidden');
+      }
+    }
+
+    // Premium Colorful gradient calculation based on station UUID
+    function getPremiumGradient(uuid) {
+      const gradients = [
+        "linear-gradient(45deg, #ff5f6d, #ffc371)",
+        "linear-gradient(45deg, #2193b0, #6dd5ed)",
+        "linear-gradient(45deg, #ee9ca7, #ffdde1)",
+        "linear-gradient(45deg, #43cea2, #185a9d)",
+        "linear-gradient(45deg, #ba8baf, #185a9d)",
+        "linear-gradient(45deg, #1f4037, #99f2c8)",
+        "linear-gradient(45deg, #f85032, #e73827)",
+        "linear-gradient(45deg, #8e2de2, #4a00e0)",
+        "linear-gradient(45deg, #00c6ff, #0072ff)"
+      ];
+      let hash = 0;
+      const str = uuid || "default-uuid";
+      for (let i = 0; i < str.length; i++) {
+        hash = str.charCodeAt(i) + ((hash << 5) - hash);
+      }
+      const index = Math.abs(hash) % gradients.length;
+      return gradients[index];
+    }
+
+    // Render Stations horizontally
+    function renderRadiosScroll(stationsList, containerId) {
+      const container = document.getElementById(containerId);
+      if(!container) return;
+      container.innerHTML = '';
+      
+      if(stationsList.length === 0) {
+        container.innerHTML = `<div class="text-zinc-500 text-xs italic py-4">No se encontraron emisoras</div>`;
+        return;
+      }
+
+      stationsList.forEach((station) => {
+        const card = document.createElement('div');
+        card.className = "min-w-[140px] max-w-[140px] bg-[#181818] hover:bg-[#282828] p-3 rounded-lg relative transition-all duration-250 transform hover:-translate-y-1 cursor-pointer snap-start flex-shrink-0 flex flex-col justify-between";
+        card.onclick = () => playStation(station);
+
+        // Calculate visual image body
+        let faviconPart = '';
+        if (station.favicon) {
+          faviconPart = `
+            <img src="${station.favicon}" alt="" onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?auto=format&fit=crop&w=128&q=80'" class="w-full aspect-square bg-[#333] rounded mb-2.5 shadow-md object-cover">
+          `;
+        } else {
+          faviconPart = `
+            <div class="w-full aspect-square rounded mb-2.5 shadow-md flex items-center justify-center font-bold text-white text-lg" style="background: ${getPremiumGradient(station.stationuuid)}">
+              ${station.name.substring(0, 2).toUpperCase()}
+            </div>
+          `;
+        }
+
+        card.innerHTML = `
+          <div>
+            ${faviconPart}
+            <h4 class="text-xs font-semibold text-white truncate max-w-full">${station.name}</h4>
+            <p class="text-[10px] text-zinc-400 truncate mt-0.5">${station.country || "Internacional"}</p>
+          </div>
+        `;
+
+        container.appendChild(card);
+      });
+    }
+
+    // Play/Pause stream operations
+    function playStation(station) {
+      currentStation = station;
+      
+      // Add to historico
+      addToHistory(station);
+
+      // Sintonizar player bar element configurations
+      document.getElementById('persistent-player-bar').classList.remove('hidden');
+
+      // Update titles
+      document.getElementById('player-station-name').innerText = station.name;
+      document.getElementById('player-station-tags').innerText = station.tags || station.country || "Estilo Libre";
+
+      // update favorites badge
+      updateFavPlayerIconState();
+
+      // Favicon wrapper icon reset
+      const wrapperFav = document.getElementById('player-favicon-wrapper');
+      if (station.favicon) {
+        wrapperFav.innerHTML = `<img src="${station.favicon}" alt="" class="w-11 h-11 rounded-full object-cover" onerror="this.onerror=null; this.innerHTML='<i data-lucide=disc></i>'; lucide.createIcons();">`;
+      } else {
+        wrapperFav.innerHTML = `<div class="w-11 h-11 rounded-full flex items-center justify-center font-bold text-white text-xs" style="background: ${getPremiumGradient(station.stationuuid)}">${station.name.substring(0,2).toUpperCase()}</div>`;
+      }
+
+      // Audio Core stream launch
+      try {
+        audioCore.src = station.url_resolved || station.url;
+        audioCore.crossOrigin = "anonymous";
+        audioCore.volume = isMuted ? 0 : volume;
+        
+        isPlaying = true;
+        audioCore.play().then(() => {
+          document.getElementById('player-play-icon').setAttribute('data-lucide', 'pause');
+          document.getElementById('player-favicon-wrapper').firstElementChild?.classList.add('animate-spin-slow');
+          lucide.createIcons();
+        }).catch((err) => {
+          console.warn("Autoplay block tracker:", err);
+          isPlaying = false;
+          updatePlayerControlVisuals();
+        });
+
+      } catch (error) {
+        console.warn("Error streaming audio core details:", error);
+      }
+
+      // Enable cassette recording selector
+      document.getElementById('recorder-action-btn').removeAttribute('disabled');
+
+      // Sync active player and translation details
+      updatePlayerControlVisuals();
+      
+      // Update cassette graphic label values
+      document.getElementById('cassette-title-label').innerText = station.name;
+      document.getElementById('cassette-radio-label').innerText = (station.tags || "SEÑAL DE RADIO").split(',')[0].toUpperCase();
+    }
+
+    // Toggle main player bar play/pause state
+    function togglePlayerPlayback() {
+      if (!currentStation) return;
+      if (isPlaying) {
+        audioCore.pause();
+        isPlaying = false;
+      } else {
+        audioCore.play().catch(e => console.warn(e));
+        isPlaying = true;
+      }
+      updatePlayerControlVisuals();
+    }
+
+    // Stop button operations (Highlight: "FALTA EL STOP!")
+    function stopStationPlayer() {
+      audioCore.pause();
+      audioCore.currentTime = 0;
+      isPlaying = false;
+      updatePlayerControlVisuals();
+    }
+
+    function updatePlayerControlVisuals() {
+      const playIcon = document.getElementById('player-play-icon');
+      const faviconEle = document.getElementById('player-favicon-wrapper').firstElementChild;
+      
+      if (isPlaying) {
+        playIcon.setAttribute('data-lucide', 'pause');
+        if (faviconEle) faviconEle.classList.add('animate-spin-slow');
+      } else {
+        playIcon.setAttribute('data-lucide', 'play');
+        if (faviconEle) faviconEle.classList.remove('animate-spin-slow');
+      }
+      lucide.createIcons();
+    }
+
+    // Muted volume actions
+    function toggleMuteState() {
+      isMuted = !isMuted;
+      audioCore.volume = isMuted ? 0 : volume;
+      
+      const volIcon = document.getElementById('player-volume-icon');
+      if (isMuted) {
+        volIcon.setAttribute('data-lucide', 'volume-x');
+      } else {
+        volIcon.setAttribute('data-lucide', 'volume-2');
+      }
+      lucide.createIcons();
+    }
+
+    function adjustVolumeValue(val) {
+      volume = parseFloat(val);
+      isMuted = false;
+      audioCore.volume = volume;
+      
+      const volIcon = document.getElementById('player-volume-icon');
+      if (volume === 0) {
+        volIcon.setAttribute('data-lucide', 'volume-x');
+      } else {
+        volIcon.setAttribute('data-lucide', 'volume-2');
+      }
+      lucide.createIcons();
+    }
+
+
+    // ================= FAVORITES MANAGEMENTS =================
+    function addToHistory(station) {
+      // Uniqueness rule: "tener en cuenta que cuando se reproduce una o 2 veces es lo mismo, solo se agrega una vez"
+      playHistory = playHistory.filter(s => s.stationuuid !== station.stationuuid);
+      playHistory.unshift(station);
+
+      // Limit length in history
+      if(playHistory.length > 25) playHistory.pop();
+
+      localStorage.setItem("spotify_radio_history", JSON.stringify(playHistory));
+      refreshHistoryView();
+    }
+
+    function refreshHistoryView() {
+      const emptyBox = document.getElementById('history-container-empty');
+      const gridBox = document.getElementById('history-scroll-grid');
+      
+      if(playHistory.length === 0) {
+        emptyBox.classList.remove('hidden');
+        gridBox.classList.add('hidden');
+      } else {
+        emptyBox.classList.add('hidden');
+        gridBox.classList.remove('hidden');
+        renderRadiosScroll(playHistory, 'history-scroll-grid');
+      }
+    }
+
+    function toggleFavoriteAction(station) {
+      const isFavIndex = favorites.findIndex(s => s.stationuuid === station.stationuuid);
+      if (isFavIndex > -1) {
+        favorites.splice(isFavIndex, 1);
+      } else {
+        favorites.unshift(station);
+      }
+      localStorage.setItem("spotify_radio_favorites", JSON.stringify(favorites));
+      
+      refreshFavoritesView();
+      updateFavPlayerIconState();
+    }
+
+    function refreshFavoritesView() {
+      const emptyBox = document.getElementById('favorites-container-empty');
+      const gridBox = document.getElementById('favorites-scroll-grid');
+
+      if(favorites.length === 0) {
+        emptyBox.classList.remove('hidden');
+        gridBox.classList.add('hidden');
+      } else {
+        emptyBox.classList.add('hidden');
+        gridBox.classList.remove('hidden');
+        renderRadiosScroll(favorites, 'favorites-scroll-grid');
+      }
+    }
+
+    function updateFavPlayerIconState() {
+      if (!currentStation) return;
+      const heartIcon = document.getElementById('player-heart-icon');
+      const isFav = favorites.some(s => s.stationuuid === currentStation.stationuuid);
+      
+      if(isFav) {
+        heartIcon.classList.add('text-spotify-green', 'fill-current');
+      } else {
+        heartIcon.classList.remove('text-spotify-green', 'fill-current');
+      }
+
+      // Bind click trigger
+      document.getElementById('player-fav-toggle-btn').onclick = () => {
+        toggleFavoriteAction(currentStation);
+      };
+    }
+
+
+    // ================= STATIC GENRE RENDERERS =================
+    function renderStaticGenres() {
+      const grid = document.getElementById('all-genres-grid');
+      if(!grid) return;
+      grid.innerHTML = '';
+
+      GENRES_LIST.forEach((genre) => {
+        const item = document.createElement('button');
+        item.className = `aspect-golden bg-gradient-to-br ${genre.color} border border-white/5 rounded-xl p-3 flex flex-col justify-between shadow-md transition-all hover:scale-[1.02] cursor-pointer text-left relative overflow-hidden group`;
+        item.onclick = () => searchByGenre(genre.name);
+        item.innerHTML = `
+          <h4 class="text-sm font-bold tracking-tight truncate">${genre.name}</h4>
+          <span class="text-[10px] bg-black/10 border border-white/10 px-1.5 py-0.5 rounded-full select-none self-start">Radio</span>
+          <div class="absolute right-[-10px] bottom-[-10px] opacity-15 translate-y-1 rotate-12 transition-transform group-hover:scale-125">
+            <i data-lucide="music" class="w-14 h-14"></i>
+          </div>
+        `;
+        grid.appendChild(item);
+      });
+    }
+
+    function renderCountriesDirectory() {
+      const directoryBox = document.getElementById('countries-directory-list');
+      if(!directoryBox) return;
+      directoryBox.innerHTML = '';
+
+      countriesList.slice(0, 150).forEach((country) => {
+        const dBtn = document.createElement('button');
+        dBtn.className = "bg-zinc-950/45 hover:bg-zinc-800 border border-zinc-850 p-2 rounded-lg text-left text-xs truncate text-zinc-305 hover:text-white transition-colors cursor-pointer";
+        dBtn.onclick = () => searchByCountry(country.name);
+        dBtn.innerHTML = `📍 ${country.name} (${country.stationcount})`;
+        directoryBox.appendChild(dBtn);
+      });
+    }
+
+
+    // ================= SEARCH DIRECTORY ACTIONS =================
+    let searchDebounceTimer = null;
+    function handleSearchTyped(val) {
+      searchQuery = val.trim();
+      const clearBtn = document.getElementById('search-clear-btn');
+      
+      if(searchQuery.length > 0) {
+        clearBtn.classList.remove('hidden');
+      } else {
+        clearBtn.classList.add('hidden');
+      }
+
+      // Live keyboard debounce search (No explicit accept button requirement!)
+      if (searchDebounceTimer) clearTimeout(searchDebounceTimer);
+      searchDebounceTimer = setTimeout(async () => {
+        if(searchQuery.length > 1) {
+          executeSearchQuery();
+        } else if (searchQuery.length === 0) {
+          closeSearchAndShowGrid();
+        }
+      }, 450);
+    }
+
+    async function executeSearchQuery() {
+      document.getElementById('search-presets-block').classList.add('hidden');
+      document.getElementById('search-results-block').classList.remove('hidden');
+      document.getElementById('search-active-spinner').classList.remove('hidden');
+      document.getElementById('search-results-empty').classList.add('hidden');
+
+      let url = `${BASE_RADIO_SERVER}/stations/search?name=${encodeURIComponent(searchQuery)}&limit=30&hidebroken=true`;
+      if(selectedCountryCode) {
+        url += `&countrycode=${selectedCountryCode}`;
+      }
+
+      try {
+        const res = await fetch(url);
+        if(res.ok) {
+          searchResults = await res.json();
+          renderSearchResultsGrid();
+        }
+      } catch (err) {
+        console.warn(err);
+      } finally {
+        document.getElementById('search-active-spinner').classList.add('hidden');
+      }
+    }
+
+    function renderSearchResultsGrid() {
+      const grid = document.getElementById('search-results-grid');
+      const emptyText = document.getElementById('search-results-empty');
+      grid.innerHTML = '';
+
+      if(searchResults.length === 0) {
+        emptyText.classList.remove('hidden');
+        return;
+      }
+
+      searchResults.forEach((station) => {
+        const item = document.createElement('div');
+        item.className = "bg-[#181818] hover:bg-[#282828] border border-white/5 rounded-xl p-3 flex items-center justify-between transition-colors cursor-pointer";
+        item.onclick = () => playStation(station);
+
+        let iconSection = '';
+        if(station.favicon) {
+          iconSection = `<img src="${station.favicon}" alt="" class="w-11 h-11 object-cover rounded-lg bg-zinc-750 flex-shrink-0" onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?auto=format&fit=crop&w=48&q=80'">`;
+        } else {
+          iconSection = `<div class="w-11 h-11 rounded-lg flex items-center justify-center font-bold text-white flex-shrink-0 text-sm" style="background: ${getPremiumGradient(station.stationuuid)}">${station.name.substring(0,2).toUpperCase()}</div>`;
+        }
+
+        const isFav = favorites.some((s) => s.stationuuid === station.stationuuid);
+        const favButtonClass = isFav ? "text-spotify-green fill-current" : "text-zinc-400 hover:text-white";
+
+        item.innerHTML = `
+          <div class="flex items-center gap-3 overflow-hidden">
+            ${iconSection}
+            <div class="overflow-hidden text-left">
+              <h4 class="text-sm font-semibold text-white truncate">${station.name}</h4>
+              <p class="text-xs text-zinc-400 truncate">${station.country || "Mundo"} • ${station.language || "Aires"}</p>
+            </div>
+          </div>
+          <button onclick="event.stopPropagation(); toggleFavFromSearchPanel('${station.stationuuid}', this)" class="p-2 hover:bg-[#3e3e3e] rounded-full transition-colors cursor-pointer text-zinc-400">
+            <i data-lucide="heart" class="w-4 h-4 ${favButtonClass}"></i>
+          </button>
+        `;
+        
+        grid.appendChild(item);
+      });
+      lucide.createIcons();
+    }
+
+    function toggleFavFromSearchPanel(uuid, btnElement) {
+      // Find full radio element in cached lists
+      const station = searchResults.find(s => s.stationuuid === uuid) || playHistory.find(s => s.stationuuid === uuid);
+      if(!station) return;
+      toggleFavoriteAction(station);
+
+      const isFavNow = favorites.some((s) => s.stationuuid === uuid);
+      const icon = btnElement.querySelector('i');
+      if (isFavNow) {
+        icon.classList.add('text-spotify-green', 'fill-current');
+      } else {
+        icon.classList.remove('text-spotify-green', 'fill-current');
+      }
+    }
+
+    function clearSearch() {
+      document.getElementById('search-input-field').value = '';
+      searchQuery = '';
+      document.getElementById('search-clear-btn').classList.add('hidden');
+      closeSearchAndShowGrid();
+    }
+
+    function closeSearchAndShowGrid() {
+      document.getElementById('search-presets-block').classList.remove('hidden');
+      document.getElementById('search-results-block').classList.add('hidden');
+      searchResults = [];
+    }
+
+    function toggleCountrySelector() {
+      const drawer = document.getElementById('country-directory-drawer');
+      const isHidden = drawer.classList.contains('hidden');
+      if(isHidden) {
+        drawer.classList.remove('hidden');
+      } else {
+        drawer.classList.add('hidden');
+      }
+    }
+
+    async function searchByGenre(genreName) {
+      document.getElementById('search-input-field').value = genreName;
+      searchQuery = genreName;
+      document.getElementById('search-clear-btn').classList.remove('hidden');
+      
+      document.getElementById('search-presets-block').classList.add('hidden');
+      document.getElementById('search-results-block').classList.remove('hidden');
+      document.getElementById('search-active-spinner').classList.remove('hidden');
+
+      try {
+        const res = await fetch(`${BASE_RADIO_SERVER}/stations/search?tag=${encodeURIComponent(genreName)}&limit=35&hidebroken=true`);
+        if(res.ok) {
+          searchResults = await res.json();
+          renderSearchResultsGrid();
+        }
+      } catch (err) {
+        console.warn(err);
+      } finally {
+        document.getElementById('search-active-spinner').classList.add('hidden');
+      }
+    }
+
+    async function searchByCountry(countryName) {
+      document.getElementById('search-input-field').value = countryName;
+      searchQuery = countryName;
+      document.getElementById('search-clear-btn').classList.remove('hidden');
+      document.getElementById('country-directory-drawer').classList.add('hidden');
+
+      document.getElementById('search-presets-block').classList.add('hidden');
+      document.getElementById('search-results-block').classList.remove('hidden');
+      document.getElementById('search-active-spinner').classList.remove('hidden');
+
+      try {
+        const res = await fetch(`${BASE_RADIO_SERVER}/stations/search?country=${encodeURIComponent(countryName)}&limit=30&hidebroken=true`);
+        if(res.ok) {
+          searchResults = await res.json();
+          renderSearchResultsGrid();
+        }
+      } catch (err) {
+        console.warn(err);
+      } finally {
+        document.getElementById('search-active-spinner').classList.add('hidden');
+      }
+    }
+
+    function searchNearMe() {
+      if(!navigator.geolocation) {
+        alert("La geociación no está activada en tu navegador.");
+        return;
+      }
+      
+      document.getElementById('search-input-field').value = "Cargando radios cerca tuyo...";
+      document.getElementById('search-presets-block').classList.add('hidden');
+      document.getElementById('search-results-block').classList.remove('hidden');
+      document.getElementById('search-active-spinner').classList.remove('hidden');
+
+      navigator.geolocation.getCurrentPosition(async (position) => {
+        try {
+          // Geo fallback: translate system language into search
+          const locale = navigator.language || "es-AR";
+          const code = locale.split('-')[1] || "ES";
+          
+          selectedCountryCode = code;
+          document.getElementById('search-input-field').value = "";
+          document.getElementById('filter-country-text').innerText = code;
+          document.getElementById('filter-country-indicator').classList.remove('hidden');
+
+          const res = await fetch(`${BASE_RADIO_SERVER}/stations/search?countrycode=${code}&limit=35&hidebroken=true`);
+          if(res.ok) {
+            searchResults = await res.json();
+            renderSearchResultsGrid();
+          }
+        } catch (e) {
+          console.warn(e);
+        } finally {
+          document.getElementById('search-active-spinner').classList.add('hidden');
+        }
+      }, (err) => {
+        alert("Fallas en permisos de GPS. Por favor acepta geo-localización.");
+        clearSearch();
+      });
+    }
+
+    function clearCountryFilter() {
+      selectedCountryCode = null;
+      document.getElementById('filter-country-indicator').classList.add('hidden');
+      if(searchQuery.length > 1) {
+        executeSearchQuery();
+      }
+    }
+
+
+    // ================= INTEGRATED PLAYLIST MODAL ACTIONS =================
+    function openPlaylistModal() {
+      document.getElementById('playlist-modal').classList.remove('hidden');
+      refreshPlaylistsDisplay();
+    }
+
+    function closePlaylistModal() {
+      document.getElementById('playlist-modal').classList.add('hidden');
+    }
+
+    function createNewPlaylistAction() {
+      const inputEl = document.getElementById('new-playlist-input');
+      const name = inputEl.value.trim();
+      if(!name) return;
+
+      const newPlaylist = {
+        id: Math.random().toString(36).substr(2, 9),
+        name: name,
+        stations: []
+      };
+
+      playlists.push(newPlaylist);
+      localStorage.setItem("spotify_radio_playlists", JSON.stringify(playlists));
+      
+      inputEl.value = '';
+      refreshPlaylistsDisplay();
+    }
+
+    function refreshPlaylistsDisplay() {
+      const menu = document.getElementById('playlist-menu-list');
+      menu.innerHTML = '';
+
+      if(playlists.length === 0) {
+        menu.innerHTML = `<span class="col-span-full text-xs text-zinc-550 italic p-3 text-center self-center w-full">Crea tu primera lista</span>`;
+        return;
+      }
+
+      playlists.forEach((p) => {
+        const item = document.createElement('button');
+        item.className = `w-full text-left p-2 rounded-lg flex items-center justify-between text-xs transition-colors cursor-pointer ${selectedPlaylistId === p.id ? 'bg-[#282828] text-white font-bold' : 'text-zinc-400 hover:bg-[#282828]/50 hover:text-white'}`;
+        item.onclick = () => selectPlaylistForShow(p.id);
+        item.innerHTML = `
+          <span class="truncate block max-w-[130px]" title="${p.name}">📁 ${p.name}</span>
+          <span class="text-[10px] font-mono bg-zinc-950/60 text-[#1DB954] border border-zinc-800 px-1.5 py-0.5 rounded-full">${p.stations.length}</span>
+        `;
+        menu.appendChild(item);
+      });
+    }
+
+    function selectPlaylistForShow(id) {
+      selectedPlaylistId = id;
+      refreshPlaylistsDisplay();
+
+      const emptyBox = document.getElementById('playlist-detail-empty');
+      const boardBox = document.getElementById('playlist-detail-board');
+      
+      emptyBox.classList.add('hidden');
+      boardBox.classList.remove('hidden');
+
+      const found = playlists.find(p => p.id === id);
+      document.getElementById('detail-playlist-title').innerText = found.name;
+
+      renderPlaylistStations(found);
+    }
+
+    function renderPlaylistStations(playlist) {
+      const container = document.getElementById('detail-playlist-items-list');
+      container.innerHTML = '';
+
+      if(playlist.stations.length === 0) {
+        container.innerHTML = `<div class="text-zinc-500 text-xs text-center py-10 italic">No hay estaciones en este playlist. Sintoniza radios y presiona "Añadir actual".</div>`;
+        return;
+      }
+
+      playlist.stations.forEach((station) => {
+        const row = document.createElement('div');
+        row.className = "flex items-center justify-between bg-zinc-950/45 border border-zinc-900 rounded-lg p-2 hover:bg-[#282828] transition-all cursor-pointer";
+        row.onclick = () => {
+          playStation(station);
+          closePlaylistModal();
+        };
+
+        let leadIcon = '';
+        if(station.favicon) {
+          leadIcon = `<img src="${station.favicon}" class="w-8 h-8 rounded object-cover" onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?auto=format&fit=crop&w=48&q=80'">`;
+        } else {
+          leadIcon = `<div class="w-8 h-8 rounded flex items-center justify-center font-bold text-white text-xs" style="background: ${getPremiumGradient(station.stationuuid)}">${station.name.substring(0,1).toUpperCase()}</div>`;
+        }
+
+        row.innerHTML = `
+          <div class="flex items-center gap-2.5 overflow-hidden">
+            ${leadIcon}
+            <div class="overflow-hidden text-left">
+              <h5 class="text-xs font-bold text-white truncate max-w-[170px]">${station.name}</h5>
+              <p class="text-[9px] text-zinc-400 truncate">${station.tagsSplit || station.country || "En vivo"}</p>
+            </div>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <button onclick="event.stopPropagation(); removeStationFromPlaylist('${playlist.id}', '${station.stationuuid}')" class="p-1 hover:bg-[#3e3e3e] text-red-400 hover:text-red-500 rounded transition-all cursor-pointer" title="Remover del playlist">
+              <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+            </button>
+          </div>
+        `;
+        container.appendChild(row);
+      });
+      lucide.createIcons();
+    }
+
+    function addPlayingToSelectedPlaylist() {
+      if(!currentStation) {
+        alert("Sintoniza una estación de radio primero!");
+        return;
+      }
+      if(!selectedPlaylistId) return;
+
+      const pIndex = playlists.findIndex(p => p.id === selectedPlaylistId);
+      if(pIndex === -1) return;
+
+      const list = playlists[pIndex].stations;
+      if (list.some(s => s.stationuuid === currentStation.stationuuid)) return; // Prevent double inclusion
+
+      list.push(currentStation);
+      localStorage.setItem("spotify_radio_playlists", JSON.stringify(playlists));
+
+      refreshPlaylistsDisplay();
+      selectPlaylistForShow(selectedPlaylistId);
+    }
+
+    function removeStationFromPlaylist(pId, stationuuid) {
+      const pIndex = playlists.findIndex(p => p.id === pId);
+      if(pIndex === -1) return;
+
+      playlists[pIndex].stations = playlists[pIndex].stations.filter(s => s.stationuuid !== stationuuid);
+      localStorage.setItem("spotify_radio_playlists", JSON.stringify(playlists));
+
+      refreshPlaylistsDisplay();
+      selectPlaylistForShow(selectedPlaylistId);
+    }
+
+
+    // ================= DYNAMIC AI TRANSLATOR SIMULATION =================
+    function initTranslatorTab() {
+      const emptyEl = document.getElementById('translator-empty-message');
+      const activeEl = document.getElementById('translator-active-board');
+
+      if (!currentStation) {
+        emptyEl.classList.remove('hidden');
+        activeEl.classList.add('hidden');
+      } else {
+        emptyEl.classList.add('hidden');
+        activeEl.classList.remove('hidden');
+        document.getElementById('translator-station-title').innerText = currentStation.name;
+        runAiTranslation();
+      }
+    }
+
+    const VIBES = [
+      "Ambiente de baladas alegres, con sintonía de hits internacionales y energía diurna.",
+      "Música acústica y tranquila, perfecta para el estudio, relax y meditación de tarde.",
+      "Ritmo bailable de alta vibración, locución fresca y enérgica, ideal para el fin de semana.",
+      "Análisis serio e investigativo con reporteros reportando eventos climáticos globales.",
+      "Espectro clásico de pop retro, mucha nostalgia y memorias musicales entrañables."
+    ];
+
+    const LYRICS_REPORTS = [
+      {
+        lang: "ES",
+        text: "¡El reporte del tiempo indica lluvias ligeras en el centro, pero nosotros traemos el calor de la música! Sigue sintonizando nuestro dial estelar.",
+        eng: "The weather report indicates light rain in the center, but we bring the heat of the music! Please keep tuning our stellar dial."
+      },
+      {
+        lang: "EN",
+        text: "Under the silver sunset skies, my heart is calling out your name. Don't go away, just make me feel alive again tonight.",
+        eng: "Bajo los cielos plateados del atardecer, mi corazón grita tu nombre. No te vayas, hazme sentir vivo de nuevo esta noche."
+      },
+      {
+        lang: "FR",
+        text: "La vie en rose n'est pas un rêve lointain, c'est l'instant magique de la mélodie que nous partageons ensemble en ce moment précis.",
+        eng: "La vida en rosa no es un sueño lejano, es el momento mágico de la melodía que compartimos juntos en este preciso instante."
+      }
+    ];
+
+    function runAiTranslation() {
+      if(!currentStation) return;
+
+      document.getElementById('translator-loading-box').classList.remove('hidden');
+      document.getElementById('translator-results-grid').classList.add('hidden');
+
+      setTimeout(() => {
+        // AI prompt generation simulator
+        const targetLanguage = document.getElementById('translator-lang-target').value;
+        const indexVibe = Math.abs(currentStation.name.charCodeAt(0) || 0) % VIBES.length;
+        const indexLyrics = Math.abs(currentStation.name.charCodeAt(1) || 0) % LYRICS_REPORTS.length;
+
+        const lyricalSelection = LYRICS_REPORTS[indexLyrics];
+        const audioLyricsOriginal = lyricalSelection.text;
+        
+        let translatedTextSim = "";
+        if (targetLanguage === "Español") {
+          translatedTextSim = lyricalSelection.eng; // Cross translate
+        } else if (targetLanguage === "English") {
+          translatedTextSim = "Welcome back listeners! Lyrical update is now processing: '" + lyricalSelection.text + "' translated into direct conversational English feed.";
+        } else {
+          translatedTextSim = "Nous reprenons le flux d'analyse de " + currentStation.name + " pour diffuser: '" + lyricalSelection.text + "' dans la langue choisie par l'auditeur.";
+        }
+
+        document.getElementById('transcription-text-box').innerText = `"${audioLyricsOriginal}"`;
+        document.getElementById('translation-text-box').innerText = `"${translatedTextSim}"`;
+        document.getElementById('translator-vibe-analysis').innerText = VIBES[indexVibe];
+        
+        document.getElementById('translator-source-badge').innerText = currentStation.language || "EXTERNA";
+        document.getElementById('translator-target-badge').innerText = targetLanguage;
+
+        document.getElementById('translator-loading-box').classList.add('hidden');
+        document.getElementById('translator-results-grid').classList.remove('hidden');
+        lucide.createIcons();
+      }, 950);
+    }
+
+
+    // ================= OLD SCHOOL CASSETTES TAPE RECORDING =================
+    function toggleRecording() {
+      if (!currentStation) return;
+      
+      const recDot = document.getElementById('rec-dot');
+      const recLabel = document.getElementById('recorder-status-text');
+
+      if (!isRecording) {
+        // Start capture process
+        isRecording = true;
+        recordingStartTime = Date.now();
+        
+        recDot.className = "w-2.5 h-2.5 rounded-full bg-red-600 animate-pulse-fast shadow shadow-red-500/50";
+        recLabel.innerText = "GRABANDO";
+        document.getElementById('cassette-rec-indicator').innerText = "NR ACTIVE";
+        
+        // Spin tape wheels
+        document.getElementById('reel-left').classList.add('tape-reel-spin');
+        document.getElementById('reel-right').classList.add('tape-reel-spin');
+      } else {
+        // Stop capture
+        isRecording = false;
+        
+        recDot.className = "w-2.5 h-2.5 rounded-full bg-zinc-600";
+        recLabel.innerText = "LISTO";
+        document.getElementById('cassette-rec-indicator').innerText = "NR OFF";
+
+        document.getElementById('reel-left').className = "w-11 h-11 rounded-full bg-zinc-950 border-4 border-dotted border-zinc-500 flex items-center justify-center p-1";
+        document.getElementById('reel-right').className = "w-11 h-11 rounded-full bg-zinc-950 border-4 border-dotted border-zinc-500 flex items-center justify-center p-1";
+
+        const seconds = Math.max(1, Math.round((Date.now() - recordingStartTime) / 1000));
+        
+        const newRecord = {
+          id: Math.random().toString(36).substr(2, 9),
+          title: `Cinta grabada: ${currentStation.name}`,
+          originalStation: currentStation,
+          timestamp: new Date().toLocaleDateString(),
+          duration: `${Math.floor(seconds/60).toString().padStart(2, '0')}:${(seconds%60).toString().padStart(2, '0')}`,
+          secondsRaw: seconds
+        };
+
+        recordedFragments.unshift(newRecord);
+        localStorage.setItem("spotify_radio_recordings", JSON.stringify(recordedFragments));
+        
+        refreshGrabacionesCatalog();
+        alert(`¡Fragmento de ${seconds}s guardado en Cassettes!`);
+      }
+    }
+
+    function refreshGrabacionesCatalog() {
+      const emptyState = document.getElementById('recordings-empty-state');
+      const grid = document.getElementById('recordings-list-grid');
+      grid.innerHTML = '';
+
+      if(recordedFragments.length === 0) {
+        emptyState.classList.remove('hidden');
+        return;
+      }
+
+      emptyState.classList.add('hidden');
+      recordedFragments.forEach((tape) => {
+        const block = document.createElement('div');
+        block.className = "flex items-center justify-between p-3 rounded-lg bg-[#181818] border border-white/5 hover:border-zinc-800 transition-colors cursor-pointer";
+        block.onclick = () => selectTapeToPlay(tape);
+
+        block.innerHTML = `
+          <div class="flex items-center gap-3">
+            <div class="w-9 h-9 rounded bg-zinc-900 border border-zinc-800 flex items-center justify-center text-red-500">
+              <i data-lucide="cassette-tape" class="w-5 h-5"></i>
+            </div>
+            <div class="text-left">
+              <h4 class="text-xs font-bold text-white">${tape.title}</h4>
+              <p class="text-[10px] text-zinc-400">Canal: ${tape.originalStation?.name || "Sin Nombre"} • ${tape.timestamp}</p>
+            </div>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="text-xs font-mono text-zinc-500">${tape.duration}</span>
+            <button onclick="event.stopPropagation(); deleteTapeAction('${tape.id}')" class="p-1 hover:text-red-500 text-zinc-500 cursor-pointer">
+              <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+            </button>
+          </div>
+        `;
+        grid.appendChild(block);
+      });
+      lucide.createIcons();
+    }
+
+    let activeSelectedTape = null;
+    let isPlayingTapePlayback = false;
+    let tapePlayTimeout = null;
+
+    function selectTapeToPlay(tape) {
+      activeSelectedTape = tape;
+      
+      // Update graphics cassette deck label values
+      document.getElementById('cassette-radio-label').innerText = "CASSETTE PLAYBACK";
+      document.getElementById('cassette-title-label').innerText = tape.title;
+      document.getElementById('active-recording-name').innerText = tape.title;
+      document.getElementById('active-recording-duration').innerText = `${tape.duration} • Grabado en ${tape.timestamp}`;
+
+      // Enable cassette player buttons
+      document.getElementById('cassette-action-play').removeAttribute('disabled');
+      
+      // Stop ongoing tape playbacks
+      stopActiveRecordingPlayback();
+    }
+
+    function playActiveRecording() {
+      if(!activeSelectedTape) return;
+
+      isPlayingTapePlayback = true;
+      document.getElementById('cassette-action-play').classList.add('hidden');
+      document.getElementById('cassette-action-stop').classList.remove('hidden');
+
+      // Spin internal reels!
+      document.getElementById('reel-left').classList.add('tape-reel-spin-fast');
+      document.getElementById('reel-right').classList.add('tape-reel-spin-fast');
+
+      // Play original stream simulated feedback
+      if(activeSelectedTape.originalStation) {
+        audioCore.src = activeSelectedTape.originalStation.url_resolved;
+        audioCore.play().catch(e=>console.warn(e));
+      }
+
+      // Simulate tape playback duration expiration
+      const durationMs = activeSelectedTape.secondsRaw * 1000;
+      tapePlayTimeout = setTimeout(() => {
+        stopActiveRecordingPlayback();
+        alert("¡Reproducción del cassette finalizada!");
+      }, durationMs);
+    }
+
+    function stopActiveRecordingPlayback() {
+      isPlayingTapePlayback = false;
+      document.getElementById('cassette-action-play').classList.remove('hidden');
+      document.getElementById('cassette-action-stop').classList.add('hidden');
+
+      // Remove rotation
+      document.getElementById('reel-left').className = "w-11 h-11 rounded-full bg-zinc-950 border-4 border-dotted border-zinc-500 flex items-center justify-center p-1";
+      document.getElementById('reel-right').className = "w-11 h-11 rounded-full bg-zinc-950 border-4 border-dotted border-zinc-500 flex items-center justify-center p-1";
+
+      if(tapePlayTimeout) clearTimeout(tapePlayTimeout);
+      audioCore.pause();
+    }
+
+    function deleteTapeAction(id) {
+      recordedFragments = recordedFragments.filter(t => t.id !== id);
+      localStorage.setItem("spotify_radio_recordings", JSON.stringify(recordedFragments));
+      
+      refreshGrabacionesCatalog();
+      
+      if(activeSelectedTape && activeSelectedTape.id === id) {
+        activeSelectedTape = null;
+        document.getElementById('active-recording-name').innerText = "Ningún fragmento seleccionado";
+        document.getElementById('active-recording-duration').innerText = "00:00 • Selecciona grabaciones de la lista";
+        document.getElementById('cassette-action-play').setAttribute('disabled', 'true');
+        stopActiveRecordingPlayback();
+      }
+    }
+
+  </script>
+</body>
+</html>

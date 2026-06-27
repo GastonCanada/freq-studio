@@ -1,0 +1,6 @@
+{
+  "name": "Frecuencia Ultimate",
+  "description": "Una aplicación premium de radio con integración de la API Radio Browser, grabación retro, playlists personalizadas y traducción en tiempo real asistida por IA.",
+  "requestFramePermissions": ["geolocation", "microphone"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
